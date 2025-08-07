@@ -1,4 +1,9 @@
--- Serviços do Roblox
+-- Verificação de ambiente e serviços do Roblox
+if not game then
+    error("Este script deve ser executado dentro do Roblox!")
+    return
+end
+
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local Workspace = game:GetService("Workspace")
@@ -11,8 +16,14 @@ local TweenService = game:GetService("TweenService")
 local ContentProvider = game:GetService("ContentProvider")
 local StarterGui = game:GetService("StarterGui")
 
--- Variáveis globais
+-- Variáveis globais com verificações de segurança
 local player = Players.LocalPlayer
+if not player then
+    warn("Player não encontrado! Aguardando...")
+    repeat wait(0.1) until Players.LocalPlayer
+    player = Players.LocalPlayer
+end
+
 local optimizerActive = true
 local lastOptimization = 0
 local fpsBoostActive = false
@@ -122,7 +133,7 @@ local function optimizeWorkspace()
             
             -- Pequena pausa para evitar lag
             if processed % 10 == 0 then
-                wait()
+                task.wait()
             end
         end
         
@@ -198,8 +209,8 @@ local function dynamicFPSMonitor()
                 end
                 
                 -- Reset após alguns segundos
-                spawn(function()
-                    wait(10)
+                task.spawn(function()
+                    task.wait(10)
                     fpsBoostActive = false
                 end)
             end
@@ -207,7 +218,7 @@ local function dynamicFPSMonitor()
     end
     
     local fpsConnection = RunService.Heartbeat:Connect(function()
-        spawn(updateFPS)
+        task.spawn(updateFPS)
     end)
     table.insert(connections, fpsConnection)
 end
@@ -215,7 +226,7 @@ end
 -- Monitoramento contínuo de novos objetos
 local function setupContinuousOptimization()
     local function optimizeNewObject(obj)
-        wait(randomDelay())
+        task.wait(randomDelay())
         
         safeExecute(function()
             if obj:IsA("Fire") or obj:IsA("Smoke") or obj:IsA("Sparkles") then
@@ -250,7 +261,7 @@ end
 local function setupAutoCleanup()
     local function periodicCleanup()
         while optimizerActive do
-            wait(30) -- Executa a cada 30 segundos
+            task.wait(30) -- Executa a cada 30 segundos
             
             safeExecute(function()
                 manageMemory()
@@ -266,7 +277,7 @@ local function setupAutoCleanup()
         end
     end
     
-    spawn(periodicCleanup)
+    task.spawn(periodicCleanup)
 end
 
 -- Limpeza ao sair do jogo
@@ -290,20 +301,23 @@ end
 
 -- Função principal de inicialização
 local function initializeOptimizer()
-    -- Aguarda um pouco para o jogo carregar
-    wait(2)
+    -- Aguarda um pouco para o jogo carregar completamente
+    if not game:IsLoaded() then
+        game.Loaded:Wait()
+    end
+    wait(3)
     
-    print("Iniciando otimizador...")
+    print("🚀 Iniciando otimizador...")
     
     -- Executa otimizações iniciais
     optimizeLighting()
-    wait(randomDelay())
+    task.wait(randomDelay())
     
     optimizeRendering()
-    wait(randomDelay())
+    task.wait(randomDelay())
     
     optimizeWorkspace()
-    wait(randomDelay())
+    task.wait(randomDelay())
     
     -- Inicia monitoramentos contínuos
     dynamicFPSMonitor()
@@ -315,8 +329,8 @@ local function initializeOptimizer()
     manageMemory()
     
     lastOptimization = tick()
-    print("Otimizador inicializado com sucesso!")
+    print("✅ Otimizador inicializado com sucesso!")
 end
 
--- Inicia o otimizador
-spawn(initializeOptimizer)
+-- Inicia o otimizador usando task.spawn (mais moderno)
+task.spawn(initializeOptimizer)
