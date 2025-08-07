@@ -8,9 +8,11 @@ local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
 local StarterGui = game:GetService("StarterGui")
+local GuiService = game:GetService("GuiService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 
 print("🚀 OTIMIZADOR ULTRA AVANÇADO INICIANDO...")
 
@@ -28,6 +30,7 @@ mainFrame.Position = UDim2.new(0, 10, 0, 10)
 mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 mainFrame.BorderSizePixel = 0
 mainFrame.BackgroundTransparency = 0.1
+mainFrame.Visible = true
 mainFrame.Parent = screenGui
 
 local gradient = Instance.new("UIGradient")
@@ -132,6 +135,48 @@ statusLabel.TextXAlignment = Enum.TextXAlignment.Left
 statusLabel.Font = Enum.Font.GothamBold
 statusLabel.Parent = mainFrame
 
+local closeButton = Instance.new("TextButton")
+closeButton.Name = "CloseButton"
+closeButton.Size = UDim2.new(0, 30, 0, 30)
+closeButton.Position = UDim2.new(1, -35, 0, 5)
+closeButton.BackgroundColor3 = Color3.fromRGB(255, 69, 69)
+closeButton.BorderSizePixel = 0
+closeButton.Text = "✕"
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.TextScaled = true
+closeButton.Font = Enum.Font.GothamBold
+closeButton.Parent = mainFrame
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 15)
+closeCorner.Parent = closeButton
+
+local closeStroke = Instance.new("UIStroke")
+closeStroke.Color = Color3.fromRGB(200, 0, 0)
+closeStroke.Thickness = 2
+closeStroke.Parent = closeButton
+
+local toggleButton = Instance.new("TextButton")
+toggleButton.Name = "ToggleButton"
+toggleButton.Size = UDim2.new(0, 30, 0, 30)
+toggleButton.Position = UDim2.new(1, -70, 0, 5)
+toggleButton.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+toggleButton.BorderSizePixel = 0
+toggleButton.Text = "−"
+toggleButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+toggleButton.TextScaled = true
+toggleButton.Font = Enum.Font.GothamBold
+toggleButton.Parent = mainFrame
+
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(0, 15)
+toggleCorner.Parent = toggleButton
+
+local toggleStroke = Instance.new("UIStroke")
+toggleStroke.Color = Color3.fromRGB(200, 150, 0)
+toggleStroke.Thickness = 2
+toggleStroke.Parent = toggleButton
+
 local function pulseAnimation()
     local tween = TweenService:Create(stroke, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
         Color = Color3.fromRGB(127, 255, 0)
@@ -140,7 +185,129 @@ local function pulseAnimation()
 end
 pulseAnimation()
 
+local isMinimized = false
+local originalSize = mainFrame.Size
+
+local function toggleFrame()
+    isMinimized = not isMinimized
+    
+    local targetSize = isMinimized and UDim2.new(0, 320, 0, 40) or originalSize
+    local targetText = isMinimized and "+" or "−"
+    
+    local framesTween = TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+        Size = targetSize
+    })
+    
+    local buttonTween = TweenService:Create(toggleButton, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Text = targetText
+    })
+    
+    framesTween:Play()
+    buttonTween:Play()
+    
+    for _, child in pairs(mainFrame:GetChildren()) do
+        if child ~= toggleButton and child ~= closeButton and child ~= corner and child ~= stroke and child ~= glowStroke and child ~= gradient then
+            child.Visible = not isMinimized
+        end
+    end
+end
+
+local function closeFrame()
+    local closeTween = TweenService:Create(mainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+        Size = UDim2.new(0, 0, 0, 0),
+        Position = UDim2.new(0, 170, 0, 55),
+        BackgroundTransparency = 1
+    })
+    
+    closeTween:Play()
+    closeTween.Completed:Connect(function()
+        screenGui:Destroy()
+    end)
+end
+
+local function setupButtonEvents()
+    closeButton.MouseButton1Click:Connect(closeFrame)
+    toggleButton.MouseButton1Click:Connect(toggleFrame)
+    
+    if isMobile then
+        closeButton.TouchTap:Connect(closeFrame)
+        toggleButton.TouchTap:Connect(toggleFrame)
+        
+        local dragStart = nil
+        local startPos = nil
+        
+        mainFrame.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.Touch then
+                dragStart = input.Position
+                startPos = mainFrame.Position
+            end
+        end)
+        
+        mainFrame.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.Touch and dragStart then
+                local delta = input.Position - dragStart
+                mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            end
+        end)
+        
+        mainFrame.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.Touch then
+                dragStart = nil
+            end
+        end)
+    else
+        closeButton.MouseEnter:Connect(function()
+            local hoverTween = TweenService:Create(closeButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundColor3 = Color3.fromRGB(255, 100, 100),
+                Size = UDim2.new(0, 32, 0, 32)
+            })
+            hoverTween:Play()
+        end)
+        
+        closeButton.MouseLeave:Connect(function()
+            local leaveTween = TweenService:Create(closeButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundColor3 = Color3.fromRGB(255, 69, 69),
+                Size = UDim2.new(0, 30, 0, 30)
+            })
+            leaveTween:Play()
+        end)
+        
+        toggleButton.MouseEnter:Connect(function()
+            local hoverTween = TweenService:Create(toggleButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundColor3 = Color3.fromRGB(255, 235, 50),
+                Size = UDim2.new(0, 32, 0, 32)
+            })
+            hoverTween:Play()
+        end)
+        
+        toggleButton.MouseLeave:Connect(function()
+            local leaveTween = TweenService:Create(toggleButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundColor3 = Color3.fromRGB(255, 215, 0),
+                Size = UDim2.new(0, 30, 0, 30)
+            })
+            leaveTween:Play()
+        end)
+        
+        UserInputService.InputBegan:Connect(function(input, gameProcessed)
+            if not gameProcessed then
+                if input.KeyCode == Enum.KeyCode.F3 then
+                    toggleFrame()
+                elseif input.KeyCode == Enum.KeyCode.F4 then
+                    closeFrame()
+                end
+            end
+        end)
+    end
+end
+
+setupButtonEvents()
+
 print("💎 Interface Ultra Premium criada!")
+if isMobile then
+    print("📱 Controles móveis ativados - Toque para fechar/minimizar")
+else
+    print("🖥️ Controles PC ativados - F3: minimizar | F4: fechar")
+end
 
 local function ultraOptimizeLighting()
     Lighting.Technology = Enum.Technology.Compatibility
