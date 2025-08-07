@@ -229,32 +229,64 @@ local function setupButtonEvents()
     closeButton.MouseButton1Click:Connect(closeFrame)
     toggleButton.MouseButton1Click:Connect(toggleFrame)
     
-    if isMobile then
-        closeButton.TouchTap:Connect(closeFrame)
-        toggleButton.TouchTap:Connect(toggleFrame)
-        
-        local dragStart = nil
-        local startPos = nil
-        
-        mainFrame.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.Touch then
+    local dragStart = nil
+    local startPos = nil
+    local isDragging = false
+    
+    mainFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            if input.Position.Y - mainFrame.AbsolutePosition.Y <= 35 then
                 dragStart = input.Position
                 startPos = mainFrame.Position
+                isDragging = true
             end
-        end)
+        end
+    end)
+    
+    mainFrame.InputChanged:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and isDragging and dragStart then
+            local delta = input.Position - dragStart
+            mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    
+    mainFrame.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDragging = false
+            dragStart = nil
+        end
+    end)
+    
+    if isMobile then
+        closeButton.Size = UDim2.new(0, 40, 0, 35)
+        toggleButton.Size = UDim2.new(0, 40, 0, 35)
+        closeButton.Position = UDim2.new(1, -45, 0, 2)
+        toggleButton.Position = UDim2.new(1, -90, 0, 2)
         
-        mainFrame.InputChanged:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.Touch and dragStart then
-                local delta = input.Position - dragStart
-                mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-            end
-        end)
+        closeButton.Activated:Connect(closeFrame)
+        toggleButton.Activated:Connect(toggleFrame)
         
-        mainFrame.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.Touch then
-                dragStart = nil
-            end
-        end)
+        local function createMobileFeedback(button, originalColor, hoverColor)
+            button.TouchTap:Connect(function()
+                local feedbackTween = TweenService:Create(button, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {
+                    BackgroundColor3 = hoverColor,
+                    Size = button.Size + UDim2.new(0, 4, 0, 4)
+                })
+                feedbackTween:Play()
+                
+                feedbackTween.Completed:Connect(function()
+                    local returnTween = TweenService:Create(button, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {
+                        BackgroundColor3 = originalColor,
+                        Size = button.Size - UDim2.new(0, 4, 0, 4)
+                    })
+                    returnTween:Play()
+                end)
+            end)
+        end
+        
+        createMobileFeedback(closeButton, Color3.fromRGB(255, 69, 69), Color3.fromRGB(255, 100, 100))
+        createMobileFeedback(toggleButton, Color3.fromRGB(255, 215, 0), Color3.fromRGB(255, 235, 50))
+        
     else
         closeButton.MouseEnter:Connect(function()
             local hoverTween = TweenService:Create(closeButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
@@ -294,6 +326,8 @@ local function setupButtonEvents()
                     toggleFrame()
                 elseif input.KeyCode == Enum.KeyCode.F4 then
                     closeFrame()
+                elseif input.KeyCode == Enum.KeyCode.H then
+                    toggleFrame()
                 end
             end
         end)
@@ -304,9 +338,11 @@ setupButtonEvents()
 
 print("💎 Interface Ultra Premium criada!")
 if isMobile then
-    print("📱 Controles móveis ativados - Toque para fechar/minimizar")
+    print("📱 MOBILE MODE - Botões maiores e feedback tátil ativado")
+    print("📱 Touch: Minimizar/Fechar | Drag: Mover frame")
 else
-    print("🖥️ Controles PC ativados - F3: minimizar | F4: fechar")
+    print("🖥️ PC MODE - Controles desktop ativados")  
+    print("🖥️ F3/H: Minimizar | F4: Fechar | Mouse: Hover effects")
 end
 
 local function ultraOptimizeLighting()
